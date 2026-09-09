@@ -46,6 +46,29 @@ final class CommissionVerifierTest extends TestCase
         $this->assertSame('https://verifier.example/ui/presentations/tx-1', $transport->sent[0]['url']);
     }
 
+    public function testFetchDoesNotTreatBadRequestAsPending(): void
+    {
+        $transport = new RecordingTransport();
+        $transport->enqueue(new HttpResponse(400, '{"error":"invalid response code"}'));
+        $verifier = new CommissionVerifier($transport, 'https://verifier.example');
+
+        $this->expectException(VerifierRejected::class);
+        $verifier->fetch('tx-1', 'bad-code');
+    }
+
+    public function testStartRequiresClientId(): void
+    {
+        $transport = new RecordingTransport();
+        $transport->enqueue(new HttpResponse(200, json_encode([
+            'transaction_id' => 'tx-1',
+            'request_uri' => 'https://verifier.test/request',
+        ], JSON_THROW_ON_ERROR)));
+        $verifier = new CommissionVerifier($transport, 'https://verifier.example');
+
+        $this->expectException(\EudiWallet\Exception\InvalidWalletResponse::class);
+        $verifier->start(['credentials' => []], $this->options());
+    }
+
     public function testFetchIncludesResponseCode(): void
     {
         $transport = new RecordingTransport();

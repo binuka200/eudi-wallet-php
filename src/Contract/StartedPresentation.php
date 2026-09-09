@@ -14,11 +14,17 @@ final class StartedPresentation
         public readonly ?string $request,
         public readonly string $authorizationRequestScheme,
     ) {
-        if ($transactionId === '') {
+        if (trim($transactionId) === '') {
             throw new \InvalidArgumentException('Verifier did not return a transaction id.');
         }
-        if ($requestUri === null && $request === null) {
+        if (trim($clientId) === '') {
+            throw new \InvalidArgumentException('Verifier did not return a client id.');
+        }
+        if (($requestUri === null || trim($requestUri) === '') && ($request === null || trim($request) === '')) {
             throw new \InvalidArgumentException('Verifier did not return a request_uri or request.');
+        }
+        if (preg_match('/^[a-z][a-z0-9+.-]*$/D', $authorizationRequestScheme) !== 1) {
+            throw new \InvalidArgumentException('Verifier returned an invalid authorization request scheme.');
         }
     }
 

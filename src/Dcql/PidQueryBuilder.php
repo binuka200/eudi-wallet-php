@@ -6,6 +6,7 @@ namespace EudiWallet\Dcql;
 
 use EudiWallet\Claim;
 use EudiWallet\Exception\UnknownClaim;
+use EudiWallet\PidAttributeMap;
 use EudiWallet\RequestOptions;
 
 final class PidQueryBuilder
@@ -24,21 +25,47 @@ final class PidQueryBuilder
         if ($claims === []) {
             throw new \InvalidArgumentException('At least one claim is required.');
         }
+        if (count($claims) !== count(array_unique($claims))) {
+            throw new \InvalidArgumentException('PID claims must not contain duplicates.');
+        }
+        if (trim($purpose) === '') {
+            throw new \InvalidArgumentException('Presentation purpose cannot be empty.');
+        }
+        if (!in_array($format, [RequestOptions::FORMAT_BOTH, RequestOptions::FORMAT_MDOC, RequestOptions::FORMAT_SD_JWT], true)) {
+            throw new \InvalidArgumentException('Unsupported PID presentation format: '.$format);
+        }
 
         $mdocClaims = [];
         $sdJwtClaims = [];
+        $mdocUnsupported = [];
+        $sdJwtUnsupported = [];
         foreach ($claims as $claim) {
             if ($claim === '' || !Claim::isKnown($claim)) {
                 throw new UnknownClaim('Unsupported EUDI PID claim: '.$claim);
             }
-            $mdocClaims[] = ['path' => [self::MDOC_DOCTYPE, $claim]];
-            $sdJwtClaims[] = ['path' => [$claim]];
+            if (PidAttributeMap::supportsMdoc($claim)) {
+                $mdocClaims[] = ['path' => PidAttributeMap::mdocPath($claim, self::MDOC_DOCTYPE)];
+            } else {
+                $mdocUnsupported[] = $claim;
+            }
+            if (PidAttributeMap::supportsSdJwt($claim)) {
+                $sdJwtClaims[] = ['path' => PidAttributeMap::sdJwtPath($claim)];
+            } else {
+                $sdJwtUnsupported[] = $claim;
+            }
+        }
+
+        $includeMdoc = ($format === RequestOptions::FORMAT_BOTH || $format === RequestOptions::FORMAT_MDOC) && $mdocUnsupported === [];
+        $includeSdJwt = ($format === RequestOptions::FORMAT_BOTH || $format === RequestOptions::FORMAT_SD_JWT) && $sdJwtUnsupported === [];
+        if (!$includeMdoc && !$includeSdJwt) {
+            $unsupported = $format === RequestOptions::FORMAT_MDOC ? $mdocUnsupported : $sdJwtUnsupported;
+            throw new UnknownClaim('Requested PID attributes are not defined for '.$format.': '.implode(', ', $unsupported));
         }
 
         $credentials = [];
         $options = [];
 
-        if ($format === RequestOptions::FORMAT_BOTH || $format === RequestOptions::FORMAT_MDOC) {
+        if ($includeMdoc) {
             $credentials[] = [
                 'id' => self::MDOC_ID,
                 'format' => 'mso_mdoc',
@@ -48,7 +75,7 @@ final class PidQueryBuilder
             $options[] = [self::MDOC_ID];
         }
 
-        if ($format === RequestOptions::FORMAT_BOTH || $format === RequestOptions::FORMAT_SD_JWT) {
+        if ($includeSdJwt) {
             $credentials[] = [
                 'id' => self::SD_JWT_ID,
                 'format' => 'dc+sd-jwt',

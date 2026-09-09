@@ -25,7 +25,7 @@ Call `complete($transactionId, $claims)` or `fail(...)` from the test.
 ## What PHP does not do
 
 - OpenID4VP request object signing
-- mdoc CBOR/COSE verification
+- mdoc COSE verification (the package only decodes an accepted DeviceResponse)
 - Holder-binding checks
 - Trusted-list and revocation lookups
 - Relying-party registration certificates, except passing them through to the

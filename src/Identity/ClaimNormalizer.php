@@ -4,75 +4,102 @@ declare(strict_types=1);
 
 namespace EudiWallet\Identity;
 
-use EudiWallet\Claim;
+use EudiWallet\Dcql\PidQueryBuilder;
+use EudiWallet\PidAttributeMap;
 
 /**
- * Best-effort extraction of PID attributes from a verifier-returned vp_token.
- *
- * Cryptographic verification is the verifier's job. This parser only reads
- * disclosed JSON and SD-JWT disclosure payloads that the verifier already
- * accepted. Compact mdoc/CBOR presentations stay in the raw vp_token.
+ * Extracts PID attributes from presentations accepted by the remote verifier.
+ * This class decodes presentation data; it does not perform cryptography.
  */
 final class ClaimNormalizer
 {
-    /** @var list<string> */
-    private array $known;
-
-    public function __construct()
-    {
-        $this->known = Claim::known();
-    }
-
     /**
      * @param array<string, mixed> $vpToken
      * @return array<string, mixed>
      */
     public function normalize(array $vpToken): array
     {
+        /** @var array<string, mixed> $found */
         $found = [];
-        $this->walk($vpToken, $found);
+
+        $mdocPresentations = $vpToken[PidQueryBuilder::MDOC_ID] ?? [];
+        foreach ($this->presentations($mdocPresentations) as $presentation) {
+            if (is_string($presentation)) {
+                $found = $this->merge($found, PidAttributeMap::normalizeMdoc(MdocDisclosureParser::claims($presentation)));
+            } elseif (is_array($presentation)) {
+                $found = $this->merge($found, $this->normalizeDecodedMdoc($presentation));
+            }
+        }
+
+        $sdJwtPresentations = $vpToken[PidQueryBuilder::SD_JWT_ID] ?? [];
+        foreach ($this->presentations($sdJwtPresentations) as $presentation) {
+            if (is_string($presentation)) {
+                $found = $this->merge($found, PidAttributeMap::normalizeSdJwt(SdJwtDisclosureParser::claims($presentation)));
+            } elseif (is_array($presentation)) {
+                $found = $this->merge($found, PidAttributeMap::normalizeSdJwt($presentation));
+            }
+        }
 
         return $found;
     }
 
-    /**
-     * @param array<string, mixed> $found
-     */
-    private function walk(mixed $node, array &$found): void
+    /** @return list<mixed> */
+    private function presentations(mixed $value): array
     {
-        if (is_string($node)) {
-            foreach (SdJwtDisclosureParser::claims($node) as $name => $value) {
-                $this->remember($found, $name, $value);
-            }
-
-            return;
+        if (!is_array($value)) {
+            return [];
         }
 
-        if (!is_array($node)) {
-            return;
-        }
-
-        foreach ($node as $key => $value) {
-            if (is_string($key)) {
-                $this->remember($found, $key, $value);
-            }
-            $this->walk($value, $found);
-        }
+        return array_is_list($value) ? $value : [$value];
     }
 
     /**
-     * @param array<string, mixed> $found
+     * @param array<string, mixed> $presentation
+     * @return array<string, mixed>
      */
-    private function remember(array &$found, string $name, mixed $value): void
+    private function normalizeDecodedMdoc(array $presentation): array
     {
-        if (!in_array($name, $this->known, true)) {
-            return;
+        $namespace = $this->findNamespace($presentation);
+
+        return $namespace === null ? [] : PidAttributeMap::normalizeMdoc($namespace);
+    }
+
+    /**
+     * @param array<array-key, mixed> $node
+     * @return array<string, mixed>|null
+     */
+    private function findNamespace(array $node): ?array
+    {
+        $namespace = $node[PidQueryBuilder::MDOC_DOCTYPE] ?? null;
+        if (is_array($namespace) && !array_is_list($namespace)) {
+            return $namespace;
         }
-        if (is_array($value)) {
-            return;
+        foreach ($node as $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            $found = $this->findNamespace($value);
+            if ($found !== null) {
+                return $found;
+            }
         }
-        if (!array_key_exists($name, $found)) {
-            $found[$name] = $value;
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $target
+     * @param array<string, mixed> $claims
+     * @return array<string, mixed>
+     */
+    private function merge(array $target, array $claims): array
+    {
+        foreach ($claims as $name => $value) {
+            if (!array_key_exists($name, $target)) {
+                $target[$name] = $value;
+            }
         }
+
+        return $target;
     }
 }

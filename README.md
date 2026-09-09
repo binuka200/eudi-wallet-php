@@ -16,11 +16,11 @@ use EudiWallet\Verifier\FakeVerifier;
 $wallet = new EudiWallet(new FakeVerifier()); // tests / local stubs only
 
 $challenge = $wallet->request([
-    Claim::AGE_OVER_18,
     Claim::FAMILY_NAME,
-], new RequestOptions(purpose: 'Age verification'));
+    Claim::GIVEN_NAME,
+], new RequestOptions(purpose: 'Account identification'));
 
-$_SESSION['eudi'] = $challenge->session->toArray();
+$_SESSION['eudi'] = $challenge->session->toArray(); // Keep server-side or integrity-protected.
 // Render $challenge->walletUri or $challenge->qrPayload()
 ```
 
@@ -30,13 +30,11 @@ After the wallet returns:
 use EudiWallet\WalletSession;
 
 $session = WalletSession::fromArray($_SESSION['eudi']);
-unset($_SESSION['eudi']);
 
 $identity = $wallet->verify($session, $_GET['response_code'] ?? null);
+unset($_SESSION['eudi']); // Clear only after a terminal, successfully read response.
 
-if ($identity->ageOver18()) {
-    // Continue. Persist only the attributes you still need.
-}
+// Continue. Persist only the attributes you still need.
 ```
 
 ## What this is for
@@ -87,9 +85,19 @@ Local Compose file: [docker/README.md](docker/README.md).
 
 ## Requested claims
 
-`request()` currently understands EU PID attributes in `Claim`. The DCQL query
-asks for either mdoc (`eu.europa.ec.eudi.pid.1`) or SD-JWT VC (`urn:eudi:pid:1`)
-so national wallets can choose a format.
+`request()` understands the encoding-independent EU PID identifiers in `Claim`.
+It maps each identifier to the correct mdoc (`eu.europa.ec.eudi.pid.1`) and
+SD-JWT VC (`urn:eudi:pid:1`) wire path, so national wallets can choose a format.
+For example, `Claim::BIRTH_DATE` maps to mdoc `birth_date` and SD-JWT
+`birthdate`; address fields map into the SD-JWT `address` object. If an
+attribute is defined for only one format (currently `resident_house_number`),
+the default `both` mode requests the format that can carry it; explicitly
+requesting an incompatible format fails before contacting the verifier.
+
+The current PID Rulebook does not define `age_over_18` or other age-over claims.
+For an age-only use case, use a suitable age attestation rather than requesting
+more identifying PID data. `ageOver18()` and `ageOver21()` remain convenience
+helpers when your lawful use case already requires `Claim::BIRTH_DATE`.
 
 Same-device flows should set `redirectUriTemplate` with `{RESPONSE_CODE}`.
 Cross-device flows omit it and call `poll()` until the wallet submits.
@@ -103,18 +111,21 @@ if ($identity === null) {
 
 ## Claim reading
 
-`VerifiedIdentity` exposes helpers such as `ageOver18()` and `familyName()`.
-Raw `vp_token` data remains available. Compact mdoc/CBOR presentations are not
-decoded here; SD-JWT disclosures and JSON presentations are read after the
-verifier has already accepted them.
+`VerifiedIdentity` exposes helpers such as `ageOver18()`, `familyName()`, and
+`nationalities()`. Raw `vp_token` data remains available. Compact mdoc/CBOR and
+SD-JWT disclosures are decoded only after the verifier has accepted them;
+signature, holder-binding, validity, revocation, and trust checks remain the
+verifier's responsibility.
 
 ## Failure behavior
 
-Every package failure extends `EudiWalletException`. Important subclasses:
+Verifier and presentation failures extend `EudiWalletException`. Invalid
+constructor or method arguments throw `InvalidArgumentException`. Important
+package exceptions include:
 
 - `UnknownClaim`, `InvalidConfiguration`
 - `VerifierUnavailable`, `VerifierRejected`
-- `PresentationPending`, `PresentationFailed`
+- `PresentationPending`, `PresentationExpired`, `PresentationFailed`
 - `InvalidWalletResponse`
 
 Map detailed failures to a generic error at the public boundary. Never return

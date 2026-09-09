@@ -21,15 +21,15 @@ final class EudiWalletTest extends TestCase
         $wallet = new EudiWallet($verifier, $observer);
 
         $challenge = $wallet->request(
-            [Claim::AGE_OVER_18, Claim::FAMILY_NAME],
-            new RequestOptions(purpose: 'Age verification'),
+            [Claim::BIRTH_DATE, Claim::FAMILY_NAME],
+            new RequestOptions(purpose: 'Identity verification'),
         );
 
         $this->assertStringStartsWith('openid4vp://?', $challenge->walletUri);
         $this->assertNull($wallet->poll($challenge->session));
 
         $verifier->complete($challenge->transactionId(), [
-            Claim::AGE_OVER_18 => true,
+            Claim::BIRTH_DATE => '2000-01-01',
             Claim::FAMILY_NAME => 'Dupont',
         ]);
 
@@ -76,5 +76,25 @@ final class EudiWalletTest extends TestCase
 
         $this->assertSame($challenge->session->transactionId, $restored->transactionId);
         $this->assertSame([Claim::BIRTH_DATE], $restored->claims);
+    }
+
+    public function testRejectsAResponseMissingARequestedClaim(): void
+    {
+        $verifier = new FakeVerifier();
+        $wallet = new EudiWallet($verifier);
+        $challenge = $wallet->request([Claim::FAMILY_NAME, Claim::GIVEN_NAME]);
+        $verifier->complete($challenge->transactionId(), [Claim::FAMILY_NAME => 'Dupont']);
+
+        $this->expectException(\EudiWallet\Exception\InvalidWalletResponse::class);
+        $wallet->verify($challenge->session);
+    }
+
+    public function testRejectsAnExpiredSessionBeforeCallingVerifier(): void
+    {
+        $wallet = new EudiWallet(new FakeVerifier(), sessionLifetimeSeconds: 60);
+        $session = new \EudiWallet\WalletSession('tx', str_repeat('n', 32), [Claim::FAMILY_NAME], 'Test', 1);
+
+        $this->expectException(\EudiWallet\Exception\PresentationExpired::class);
+        $wallet->poll($session);
     }
 }

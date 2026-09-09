@@ -89,14 +89,45 @@ final class FakeVerifier implements Verifier
     private function sdJwt(array $claims): string
     {
         $header = self::b64url('{"alg":"none","typ":"dc+sd-jwt"}');
-        $payload = self::b64url('{"vct":"urn:eudi:pid:1"}');
-        $token = $header.'.'.$payload.'.';
-        $disclosures = [];
+        $wireClaims = [];
         foreach ($claims as $name => $value) {
-            $disclosures[] = self::b64url(json_encode(['salt', $name, $value], JSON_THROW_ON_ERROR));
+            self::setPath($wireClaims, \EudiWallet\PidAttributeMap::sdJwtPath($name), $value);
         }
+        $disclosures = [];
+        $digests = [];
+        foreach ($wireClaims as $name => $value) {
+            $disclosure = self::b64url(json_encode(['salt-'.$name, $name, $value], JSON_THROW_ON_ERROR));
+            $disclosures[] = $disclosure;
+            $digests[] = self::b64url(hash('sha256', $disclosure, true));
+        }
+        $payload = self::b64url(json_encode([
+            '_sd' => $digests,
+            '_sd_alg' => 'sha-256',
+            'vct' => 'urn:eudi:pid:1',
+        ], JSON_THROW_ON_ERROR));
+        $token = $header.'.'.$payload.'.';
 
         return $token.'~'.implode('~', $disclosures).'~'.$header.'.'.$payload.'.';
+    }
+
+    /**
+     * @param array<string, mixed> $target
+     * @param list<string> $path
+     */
+    private static function setPath(array &$target, array $path, mixed $value): void
+    {
+        $last = array_pop($path);
+        if ($last === null) {
+            return;
+        }
+        $cursor = &$target;
+        foreach ($path as $segment) {
+            if (!isset($cursor[$segment]) || !is_array($cursor[$segment])) {
+                $cursor[$segment] = [];
+            }
+            $cursor = &$cursor[$segment];
+        }
+        $cursor[$last] = $value;
     }
 
     private static function randomId(): string

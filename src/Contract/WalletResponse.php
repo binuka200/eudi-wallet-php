@@ -21,6 +21,9 @@ final class WalletResponse
         public readonly ?string $errorDescription = null,
         public readonly array $raw = [],
     ) {
+        if (!in_array($this->status, [self::PENDING, self::SUBMITTED, self::FAILED], true)) {
+            throw new \InvalidArgumentException('Unknown wallet response status: '.$this->status);
+        }
     }
 
     public static function pending(): self

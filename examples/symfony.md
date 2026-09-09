@@ -13,9 +13,9 @@ use Symfony\Component\HttpFoundation\Request;
 public function start(Request $request, EudiWallet $wallet)
 {
     $challenge = $wallet->request(
-        [Claim::AGE_OVER_18],
+        [Claim::FAMILY_NAME, Claim::GIVEN_NAME],
         new RequestOptions(
-            purpose: 'Age verification',
+            purpose: 'Identify the account holder',
             redirectUriTemplate: $this->generateUrl('eudi_callback', [], 0).'?response_code={RESPONSE_CODE}',
         ),
     );
@@ -27,15 +27,14 @@ public function start(Request $request, EudiWallet $wallet)
 
 public function callback(Request $request, EudiWallet $wallet)
 {
-    $stored = $request->getSession()->remove('eudi');
+    $stored = $request->getSession()->get('eudi');
     $identity = $wallet->verify(
         WalletSession::fromArray($stored),
         $request->query->get('response_code'),
     );
+    $request->getSession()->remove('eudi');
 
-    if (!$identity->ageOver18()) {
-        throw $this->createAccessDeniedException();
-    }
+    // Bind the verified attributes to your user.
 }
 ```
 

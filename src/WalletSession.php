@@ -6,19 +6,43 @@ namespace EudiWallet;
 
 final class WalletSession
 {
+    /** @var non-empty-list<string> */
+    public readonly array $claims;
+
     /**
-     * @param list<string> $claims
+     * @param array<array-key, mixed> $claims
      */
     public function __construct(
         public readonly string $transactionId,
         public readonly string $nonce,
-        public readonly array $claims,
+        array $claims,
         public readonly string $purpose,
         public readonly int $createdAt,
     ) {
-        if ($transactionId === '' || $nonce === '') {
-            throw new \InvalidArgumentException('Wallet session is missing transaction id or nonce.');
+        if (trim($transactionId) === '') {
+            throw new \InvalidArgumentException('Wallet session is missing a transaction id.');
         }
+        if (strlen($nonce) < 32) {
+            throw new \InvalidArgumentException('Wallet session nonce must contain at least 32 characters.');
+        }
+        if ($claims === [] || !array_is_list($claims)) {
+            throw new \InvalidArgumentException('Wallet session must contain a non-empty claim list.');
+        }
+        foreach ($claims as $claim) {
+            if (!is_string($claim) || !Claim::isKnown($claim)) {
+                throw new \InvalidArgumentException('Wallet session contains an unsupported PID claim.');
+            }
+        }
+        if (count($claims) !== count(array_unique($claims))) {
+            throw new \InvalidArgumentException('Wallet session claims must not contain duplicates.');
+        }
+        if (trim($purpose) === '') {
+            throw new \InvalidArgumentException('Wallet session purpose cannot be empty.');
+        }
+        if ($createdAt < 1) {
+            throw new \InvalidArgumentException('Wallet session creation time is invalid.');
+        }
+        $this->claims = $claims;
     }
 
     /** @return array{transaction_id: string, nonce: string, claims: list<string>, purpose: string, created_at: int} */
@@ -33,6 +57,16 @@ final class WalletSession
         ];
     }
 
+    public function isExpired(int $lifetimeSeconds, ?int $now = null): bool
+    {
+        if ($lifetimeSeconds < 1) {
+            throw new \InvalidArgumentException('Session lifetime must be at least one second.');
+        }
+        $now ??= time();
+
+        return $this->createdAt > $now + 60 || $this->createdAt + $lifetimeSeconds < $now;
+    }
+
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {
@@ -41,6 +75,7 @@ final class WalletSession
             throw new \InvalidArgumentException('Wallet session claims must be a list.');
         }
 
+        /** @var list<string> $normalized */
         $normalized = [];
         foreach ($claims as $claim) {
             if (!is_string($claim) || $claim === '') {

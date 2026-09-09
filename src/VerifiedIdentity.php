@@ -17,14 +17,16 @@ final class VerifiedIdentity
     ) {
     }
 
-    public function ageOver18(): bool
+    /** Returns false when the birth date is absent, partial, invalid, or under 18. */
+    public function ageOver18(?\DateTimeImmutable $onDate = null): bool
     {
-        return $this->booleanClaim(Claim::AGE_OVER_18) === true;
+        return $this->ageAtLeast(18, $onDate) === true;
     }
 
-    public function ageOver21(): bool
+    /** Returns false when the birth date is absent, partial, invalid, or under 21. */
+    public function ageOver21(?\DateTimeImmutable $onDate = null): bool
     {
-        return $this->booleanClaim(Claim::AGE_OVER_21) === true;
+        return $this->ageAtLeast(21, $onDate) === true;
     }
 
     public function familyName(): ?string
@@ -40,6 +42,36 @@ final class VerifiedIdentity
     public function birthDate(): ?string
     {
         return $this->stringClaim(Claim::BIRTH_DATE);
+    }
+
+    /** @return list<string> */
+    public function nationalities(): array
+    {
+        $value = $this->claims[Claim::NATIONALITY] ?? null;
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter($value, static fn (mixed $country): bool => is_string($country)));
+    }
+
+    public function ageAtLeast(int $years, ?\DateTimeImmutable $onDate = null): ?bool
+    {
+        if ($years < 0) {
+            throw new \InvalidArgumentException('Age must not be negative.');
+        }
+        $value = $this->birthDate();
+        if ($value === null || preg_match('/^\d{4}-\d{2}-\d{2}$/D', $value) !== 1) {
+            return null;
+        }
+        $birthDate = \DateTimeImmutable::createFromFormat('!Y-m-d', $value, new \DateTimeZone('UTC'));
+        $errors = \DateTimeImmutable::getLastErrors();
+        if ($birthDate === false || (is_array($errors) && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))) {
+            return null;
+        }
+        $onDate ??= new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
+
+        return $birthDate->modify('+'.$years.' years') <= $onDate;
     }
 
     public function claim(string $name): mixed
@@ -59,19 +91,4 @@ final class VerifiedIdentity
         return is_string($value) && $value !== '' ? $value : null;
     }
 
-    private function booleanClaim(string $name): ?bool
-    {
-        $value = $this->claims[$name] ?? null;
-        if (is_bool($value)) {
-            return $value;
-        }
-        if ($value === 'true' || $value === '1' || $value === 1) {
-            return true;
-        }
-        if ($value === 'false' || $value === '0' || $value === 0) {
-            return false;
-        }
-
-        return null;
-    }
 }

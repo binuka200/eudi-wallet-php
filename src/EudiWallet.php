@@ -11,6 +11,7 @@ use EudiWallet\Contract\WalletResponse;
 use EudiWallet\Dcql\PidQueryBuilder;
 use EudiWallet\Exception\InvalidWalletResponse;
 use EudiWallet\Exception\PresentationFailed;
+use EudiWallet\Exception\PresentationExpired;
 use EudiWallet\Exception\PresentationPending;
 use EudiWallet\Identity\ClaimNormalizer;
 
@@ -27,7 +28,11 @@ final class EudiWallet
         private readonly Observer $observer = new NullObserver(),
         ?PidQueryBuilder $queryBuilder = null,
         ?ClaimNormalizer $normalizer = null,
+        private readonly int $sessionLifetimeSeconds = 600,
     ) {
+        if ($this->sessionLifetimeSeconds < 1) {
+            throw new \InvalidArgumentException('Session lifetime must be at least one second.');
+        }
         $this->queryBuilder = $queryBuilder ?? new PidQueryBuilder();
         $this->normalizer = $normalizer ?? new ClaimNormalizer();
     }
@@ -88,6 +93,9 @@ final class EudiWallet
 
     public function poll(WalletSession $session, ?string $responseCode = null): ?VerifiedIdentity
     {
+        if ($session->isExpired($this->sessionLifetimeSeconds)) {
+            throw new PresentationExpired('The wallet presentation session has expired.');
+        }
         $response = $this->verifier->fetch($session->transactionId, $responseCode);
         if ($response->status === WalletResponse::PENDING) {
             $this->observer->record('presentation.pending', ['transaction_present' => true]);
@@ -106,6 +114,12 @@ final class EudiWallet
         }
 
         $claims = $this->normalizer->normalize($response->vpToken);
+        $requested = array_fill_keys($session->claims, true);
+        $missing = array_keys(array_diff_key($requested, $claims));
+        if ($missing !== []) {
+            throw new InvalidWalletResponse('Verified presentation is missing requested PID attributes: '.implode(', ', $missing));
+        }
+        $claims = array_intersect_key($claims, $requested);
         $this->observer->record('presentation.verified', [
             'transaction_present' => true,
             'disclosed_claim_count' => count($claims),

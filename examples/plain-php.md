@@ -16,9 +16,9 @@ $wallet = new EudiWallet(new CommissionVerifier(
 ));
 
 $challenge = $wallet->request(
-    [Claim::AGE_OVER_18],
+    [Claim::FAMILY_NAME, Claim::GIVEN_NAME],
     new RequestOptions(
-        purpose: 'Confirm you are over 18',
+        purpose: 'Identify the account holder',
         redirectUriTemplate: 'https://example.com/wallet/callback?response_code={RESPONSE_CODE}',
     ),
 );
@@ -31,7 +31,6 @@ Callback:
 
 ```php
 $stored = $_SESSION['eudi'] ?? null;
-unset($_SESSION['eudi']);
 if (!is_array($stored)) {
     throw new RuntimeException('EUDI session expired.');
 }
@@ -40,10 +39,7 @@ $identity = $wallet->verify(
     WalletSession::fromArray($stored),
     isset($_GET['response_code']) && is_string($_GET['response_code']) ? $_GET['response_code'] : null,
 );
+unset($_SESSION['eudi']);
 
-if (!$identity->ageOver18()) {
-    http_response_code(403);
-    echo 'Age verification failed.';
-    exit;
-}
+// Bind the verified attributes to your user, then retain only what you need.
 ```

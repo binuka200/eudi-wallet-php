@@ -33,12 +33,19 @@ final class CommissionVerifier implements Verifier
         if ($baseUrl === '') {
             throw new InvalidConfiguration('Verifier base URL cannot be empty.');
         }
-        $scheme = parse_url($baseUrl, PHP_URL_SCHEME);
+        $parts = parse_url($baseUrl);
+        if ($parts === false) {
+            throw new InvalidConfiguration('Verifier URL is invalid.');
+        }
+        $scheme = $parts['scheme'] ?? null;
         if ($scheme === 'http' && !$this->allowInsecureHttp) {
             throw new InvalidConfiguration('Verifier URL must use HTTPS. Set allowInsecureHttp only for local Docker.');
         }
         if ($scheme !== 'http' && $scheme !== 'https') {
             throw new InvalidConfiguration('Verifier URL must be an absolute http(s) URL.');
+        }
+        if (!isset($parts['host']) || $parts['host'] === '' || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])) {
+            throw new InvalidConfiguration('Verifier URL must contain a host and no credentials, query, or fragment.');
         }
         $this->baseUrl = $baseUrl;
     }
@@ -81,7 +88,7 @@ final class CommissionVerifier implements Verifier
 
         $data = $this->decode($response->body);
         $transactionId = $data['transaction_id'] ?? null;
-        $clientId = $data['client_id'] ?? '';
+        $clientId = $data['client_id'] ?? null;
         $requestUri = $data['request_uri'] ?? null;
         $request = $data['request'] ?? null;
         $requestUriMethod = $data['request_uri_method'] ?? $options->requestUriMethod;
@@ -89,10 +96,13 @@ final class CommissionVerifier implements Verifier
         if (!is_string($transactionId) || $transactionId === '') {
             throw new InvalidWalletResponse('Verifier start response is missing transaction_id.');
         }
+        if (!is_string($clientId) || $clientId === '') {
+            throw new InvalidWalletResponse('Verifier start response is missing client_id.');
+        }
 
         return new StartedPresentation(
             transactionId: $transactionId,
-            clientId: is_string($clientId) ? $clientId : '',
+            clientId: $clientId,
             requestUri: is_string($requestUri) && $requestUri !== '' ? $requestUri : null,
             requestUriMethod: is_string($requestUriMethod) && $requestUriMethod !== '' ? $requestUriMethod : null,
             request: is_string($request) && $request !== '' ? $request : null,
@@ -102,13 +112,16 @@ final class CommissionVerifier implements Verifier
 
     public function fetch(string $transactionId, ?string $responseCode = null): WalletResponse
     {
+        if ($transactionId === '') {
+            throw new \InvalidArgumentException('Transaction id cannot be empty.');
+        }
         $url = $this->baseUrl.'/ui/presentations/'.rawurlencode($transactionId);
         if ($responseCode !== null && $responseCode !== '') {
             $url .= '?response_code='.rawurlencode($responseCode);
         }
 
         $response = $this->call('GET', $url, ['Accept' => 'application/json']);
-        if ($response->status === 404 || $response->status === 400) {
+        if ($response->status === 404) {
             return WalletResponse::pending();
         }
         if ($response->status < 200 || $response->status >= 300) {
@@ -140,7 +153,7 @@ final class CommissionVerifier implements Verifier
         } catch (\JsonException $exception) {
             throw new InvalidWalletResponse('Verifier returned invalid JSON.', 0, $exception);
         }
-        if (!is_array($data)) {
+        if (!is_array($data) || array_is_list($data)) {
             throw new InvalidWalletResponse('Verifier returned a non-object JSON payload.');
         }
 

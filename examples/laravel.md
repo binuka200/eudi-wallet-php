@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 public function start(Request $request, EudiWallet $wallet)
 {
     $challenge = $wallet->request(
-        [Claim::AGE_OVER_18, Claim::FAMILY_NAME],
+        [Claim::FAMILY_NAME, Claim::GIVEN_NAME],
         new RequestOptions(
             purpose: 'Account opening',
             redirectUriTemplate: url('/wallet/callback').'?response_code={RESPONSE_CODE}',
@@ -27,11 +27,12 @@ public function start(Request $request, EudiWallet $wallet)
 
 public function callback(Request $request, EudiWallet $wallet)
 {
-    $stored = $request->session()->pull('eudi');
+    $stored = $request->session()->get('eudi');
     $identity = $wallet->verify(
         WalletSession::fromArray($stored),
         $request->query('response_code'),
     );
+    $request->session()->forget('eudi');
 
     // Bind $identity to your own user model. This package does not log users in.
 }
