@@ -1,0 +1,10 @@
+services:
+  verifier:
+    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-verifier-endpoint:v0.11.0
+    container_name: eudi-verifier
+    ports:
+      - "8080:8080"
+    environment:
+      VERIFIER_PUBLICURL: "${VERIFIER_PUBLICURL:-http://127.0.0.1:8080}"
+      VERIFIER_DEFAULTHTTPRESPONSEMODE: "DirectPostJwt"
+```

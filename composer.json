@@ -1,0 +1,51 @@
+{
+    "name": "binuka200/eudi-wallet",
+    "description": "Framework-neutral PHP façade for EU Digital Identity Wallet verification via a remote OpenID4VP verifier.",
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/binuka200/eudi-wallet-php",
+    "keywords": ["eudi", "eidas", "openid4vp", "wallet", "pid", "verifiable-credentials"],
+    "authors": [
+        {
+            "name": "Binuka Jayaweera",
+            "homepage": "https://github.com/binuka200"
+        }
+    ],
+    "support": {
+        "docs": "https://github.com/binuka200/eudi-wallet-php#readme",
+        "issues": "https://github.com/binuka200/eudi-wallet-php/issues",
+        "source": "https://github.com/binuka200/eudi-wallet-php"
+    },
+    "require": {
+        "php": "^8.1",
+        "ext-json": "*",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.0",
+        "psr/http-message": "^1.1 || ^2.0"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^1.12 || ^2.0",
+        "phpunit/phpunit": "^10.5 || ^11.0 || ^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "EudiWallet\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "EudiWallet\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "lint": "@php tools/lint.php",
+        "analyse": "phpstan analyse --no-progress --memory-limit=512M",
+        "check": ["@lint", "@analyse", "@test"]
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

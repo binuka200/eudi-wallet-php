@@ -1,0 +1,7 @@
+/vendor/
+/.phpunit.cache/
+/.phpunit.result.cache
+/.phpstan.cache/
+/composer.lock
+.env
+docker/keystore.jks
