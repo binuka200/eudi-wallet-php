@@ -222,6 +222,12 @@ pass, and [docs/architecture.md](docs/architecture.md) for the design boundary
 that keeps cryptography out of PHP. This project follows the
 [Contributor Covenant](CODE_OF_CONDUCT.md).
 
+## AI Tools used
+
+Daybreak blue (to identify vulnerabilities)
+Codex Sol
+
+
 ## License
 
 MIT
