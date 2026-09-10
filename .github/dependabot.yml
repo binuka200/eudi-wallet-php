@@ -10,6 +10,11 @@ updates:
       - dependencies
     groups:
       composer:
+        applies-to: version-updates
+        patterns:
+          - '*'
+      composer-security:
+        applies-to: security-updates
         patterns:
           - '*'
 
@@ -22,5 +27,10 @@ updates:
       - dependencies
     groups:
       github-actions:
+        applies-to: version-updates
+        patterns:
+          - '*'
+      github-actions-security:
+        applies-to: security-updates
         patterns:
           - '*'
