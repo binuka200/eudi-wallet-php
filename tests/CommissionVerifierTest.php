@@ -37,10 +37,11 @@ final class CommissionVerifierTest extends TestCase
         $this->assertSame('openid4vp', $body['authorization_request_scheme']);
     }
 
-    public function testFetchTreatsNotFoundAsPending(): void
+    public function testFetchTreatsBadRequestWithoutResponseCodeAsPending(): void
     {
+        // The Commission verifier answers 400 with an empty body until the wallet submits.
         $transport = new RecordingTransport();
-        $transport->enqueue(new HttpResponse(404, ''));
+        $transport->enqueue(new HttpResponse(400, ''));
         $verifier = new CommissionVerifier($transport, 'https://verifier.example');
 
         $response = $verifier->fetch('tx-1');
@@ -48,14 +49,80 @@ final class CommissionVerifierTest extends TestCase
         $this->assertSame('https://verifier.example/ui/presentations/tx-1', $transport->sent[0]['url']);
     }
 
-    public function testFetchDoesNotTreatBadRequestAsPending(): void
+    public function testFetchTreatsBadRequestWithResponseCodeAsRejected(): void
     {
         $transport = new RecordingTransport();
-        $transport->enqueue(new HttpResponse(400, '{"error":"invalid response code"}'));
+        $transport->enqueue(new HttpResponse(400, ''));
         $verifier = new CommissionVerifier($transport, 'https://verifier.example');
 
-        $this->expectException(VerifierRejected::class);
-        $verifier->fetch('tx-1', 'bad-code');
+        try {
+            $verifier->fetch('tx-1', 'bad-code');
+            $this->fail('A wrong response code must not look pending.');
+        } catch (VerifierRejected $exception) {
+            $this->assertSame(400, $exception->status());
+        }
+    }
+
+    public function testFetchTreatsNotFoundAsUnknownTransaction(): void
+    {
+        $transport = new RecordingTransport();
+        $transport->enqueue(new HttpResponse(404, ''));
+        $verifier = new CommissionVerifier($transport, 'https://verifier.example');
+
+        try {
+            $verifier->fetch('tx-1');
+            $this->fail('An unknown transaction must not look pending.');
+        } catch (VerifierRejected $exception) {
+            $this->assertSame(404, $exception->status());
+        }
+    }
+
+    public function testRejectionKeepsATruncatedBodyForDiagnostics(): void
+    {
+        $transport = new RecordingTransport();
+        $transport->enqueue(new HttpResponse(422, str_repeat('x', VerifierRejected::MAX_BODY_BYTES + 100)));
+        $verifier = new CommissionVerifier($transport, 'https://verifier.example');
+
+        try {
+            $verifier->start(['credentials' => []], $this->options());
+            $this->fail('Expected rejection.');
+        } catch (VerifierRejected $exception) {
+            $this->assertSame(422, $exception->status());
+            $this->assertSame(VerifierRejected::MAX_BODY_BYTES, strlen($exception->responseBody));
+            $this->assertStringNotContainsString('xxx', $exception->getMessage());
+        }
+    }
+
+    public function testConfiguredHeadersAreSentWithEveryRequest(): void
+    {
+        $transport = new RecordingTransport();
+        $transport->enqueue(new HttpResponse(400, ''));
+        $verifier = new CommissionVerifier($transport, 'https://verifier.example', headers: [
+            'Authorization' => 'Bearer secret',
+            'X-Api-Key' => 'key',
+        ]);
+
+        $verifier->fetch('tx-1');
+        $this->assertSame('Bearer secret', $transport->sent[0]['headers']['Authorization']);
+        $this->assertSame('key', $transport->sent[0]['headers']['X-Api-Key']);
+        $this->assertSame('application/json', $transport->sent[0]['headers']['Accept']);
+    }
+
+    public function testReservedAndUnsafeHeadersAreRejected(): void
+    {
+        foreach ([
+            ['Accept' => 'text/plain'],
+            ['content-type' => 'text/plain'],
+            ['Authorization' => "Bearer a\r\nX-Injected: 1"],
+            ['Bad Name' => 'x'],
+        ] as $headers) {
+            try {
+                new CommissionVerifier(new RecordingTransport(), 'https://verifier.example', headers: $headers);
+                $this->fail('Header set should have been rejected: '.json_encode($headers, JSON_THROW_ON_ERROR));
+            } catch (InvalidConfiguration) {
+                $this->addToAssertionCount(1);
+            }
+        }
     }
 
     public function testStartRequiresClientId(): void

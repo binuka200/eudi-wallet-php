@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EudiWallet\Identity;
 
 use EudiWallet\Dcql\PidQueryBuilder;
+use EudiWallet\Exception\InvalidWalletResponse;
 use EudiWallet\PidAttributeMap;
 
 /**
@@ -97,6 +98,8 @@ final class ClaimNormalizer
         foreach ($claims as $name => $value) {
             if (!array_key_exists($name, $target)) {
                 $target[$name] = $value;
+            } elseif ($target[$name] !== $value) {
+                throw new InvalidWalletResponse('Presentations disagree on PID attribute: '.$name);
             }
         }
 

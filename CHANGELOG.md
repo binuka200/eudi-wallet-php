@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Fix Commission verifier polling: HTTP 400 without a response code is now
+  pending and HTTP 404 is an unknown transaction, matching the pinned
+  `v0.11.0` behaviour. Previously every cross-device poll threw until the
+  wallet submitted.
+- Add a `headers` option to `CommissionVerifier` for protected verifier APIs.
+- `VerifierRejected` now exposes `status()` and a truncated `responseBody`.
+- Expose the mdoc portrait as the same `data:` URL shape as SD-JWT VC, and
+  require a base64 data URL when validating the portrait.
+- Reject presentations whose mdoc and SD-JWT VC values disagree instead of
+  silently preferring the mdoc value.
+- Report malformed mdoc presentations as `InvalidWalletResponse` with the
+  decode reason instead of an empty claim set.
+- Decode CBOR 64-bit floats.
+- **Breaking:** `PidQueryBuilder::build()` no longer takes the unused purpose
+  argument; the signature is `build(array $claims, string $format = 'both')`.
 - Align PID attributes with PID Rulebook 1.7, including distinct mdoc and
   SD-JWT VC claim paths and removal of obsolete age-over PID attributes.
 - Decode structured SD-JWT disclosures and compact mdoc issuer-signed items.

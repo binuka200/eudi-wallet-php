@@ -20,16 +20,13 @@ final class PidQueryBuilder
      * @param list<string> $claims
      * @return array<string, mixed>
      */
-    public function build(array $claims, string $purpose, string $format = RequestOptions::FORMAT_BOTH): array
+    public function build(array $claims, string $format = RequestOptions::FORMAT_BOTH): array
     {
         if ($claims === []) {
             throw new \InvalidArgumentException('At least one claim is required.');
         }
         if (count($claims) !== count(array_unique($claims))) {
             throw new \InvalidArgumentException('PID claims must not contain duplicates.');
-        }
-        if (trim($purpose) === '') {
-            throw new \InvalidArgumentException('Presentation purpose cannot be empty.');
         }
         if (!in_array($format, [RequestOptions::FORMAT_BOTH, RequestOptions::FORMAT_MDOC, RequestOptions::FORMAT_SD_JWT], true)) {
             throw new \InvalidArgumentException('Unsupported PID presentation format: '.$format);

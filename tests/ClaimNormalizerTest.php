@@ -63,6 +63,47 @@ final class ClaimNormalizerTest extends TestCase
         $this->assertSame('Dupont', $claims[Claim::FAMILY_NAME]);
     }
 
+    public function testRejectsPresentationsThatDisagreeOnAnAttribute(): void
+    {
+        $this->expectException(\EudiWallet\Exception\InvalidWalletResponse::class);
+        $this->expectExceptionMessage('family_name');
+
+        (new ClaimNormalizer())->normalize([
+            PidQueryBuilder::MDOC_ID => [[PidQueryBuilder::MDOC_DOCTYPE => ['family_name' => 'Dupont']]],
+            PidQueryBuilder::SD_JWT_ID => [$this->sdJwt(['family_name' => 'Mallory'])],
+        ]);
+    }
+
+    public function testAcceptsPresentationsThatAgree(): void
+    {
+        $claims = (new ClaimNormalizer())->normalize([
+            PidQueryBuilder::MDOC_ID => [[PidQueryBuilder::MDOC_DOCTYPE => ['family_name' => 'Dupont']]],
+            PidQueryBuilder::SD_JWT_ID => [$this->sdJwt(['family_name' => 'Dupont'])],
+        ]);
+
+        $this->assertSame('Dupont', $claims[Claim::FAMILY_NAME]);
+    }
+
+    public function testExposesMdocPortraitBytesAsADataUrl(): void
+    {
+        $jpeg = "\xFF\xD8\xFF\xE0jpeg-bytes";
+        $claims = (new ClaimNormalizer())->normalize([
+            PidQueryBuilder::MDOC_ID => [[PidQueryBuilder::MDOC_DOCTYPE => ['portrait' => $jpeg]]],
+        ]);
+
+        $this->assertSame('data:image/jpeg;base64,'.base64_encode($jpeg), $claims[Claim::PORTRAIT]);
+    }
+
+    public function testMalformedCompactMdocIsAnError(): void
+    {
+        $this->expectException(\EudiWallet\Exception\InvalidWalletResponse::class);
+        $this->expectExceptionMessage('could not be decoded');
+
+        (new ClaimNormalizer())->normalize([
+            PidQueryBuilder::MDOC_ID => [rtrim(strtr(base64_encode("\x9f\x01"), '+/', '-_'), '=')],
+        ]);
+    }
+
     /** @param array<string, mixed> $claims */
     private function sdJwt(array $claims): string
     {

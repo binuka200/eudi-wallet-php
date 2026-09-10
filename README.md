@@ -77,7 +77,16 @@ $wallet = new EudiWallet($verifier);
 ```
 
 `VERIFIER_URL` must be HTTPS unless you pass `allowInsecureHttp: true` for local
-Docker. The Commission
+Docker. When the verifier API is protected, pass the credential as a header
+sent with every request:
+
+```php
+$verifier = new CommissionVerifier($transport, $_ENV['VERIFIER_URL'], headers: [
+    'Authorization' => 'Bearer '.$_ENV['VERIFIER_TOKEN'],
+]);
+```
+
+The Commission
 [verifier endpoint](https://github.com/eu-digital-identity-wallet/eudi-srv-verifier-endpoint)
 is a development tool; assess any backend before production use.
 
@@ -87,7 +96,9 @@ The challenge uses the complete `authorization_request_uri` returned by version
 2 of the Commission verifier API. The package does not reconstruct or override
 that URI. Presentation nonces are always generated internally from 32
 cryptographically random bytes; they cannot be supplied by browser input or
-application code.
+application code. The verifier binds the wallet response to that nonce; this
+package does not compare it again afterwards, so it lives in `WalletSession`
+only as opaque server-side state.
 
 ## Requested claims
 
@@ -119,6 +130,13 @@ if ($identity === null) {
 }
 ```
 
+`poll()` returns `null` only while the wallet has not submitted. Every
+exception is terminal for that session: `PresentationExpired` when the local
+session lifetime passed, `VerifierRejected` when the verifier no longer knows
+the transaction or refuses a same-device `response_code`, `PresentationFailed`
+when the wallet declined, and `InvalidWalletResponse` when the accepted
+presentation cannot be read.
+
 ## Claim reading
 
 `VerifiedIdentity` exposes helpers such as `ageOver18()`, `familyName()`, and
@@ -128,6 +146,12 @@ signature, holder-binding, validity, revocation, and trust checks remain the
 verifier's responsibility. Requested PID values are then checked against the
 Rulebook's format-independent types before a `VerifiedIdentity` is returned.
 
+Values are exposed in one shape regardless of wire format: the mdoc portrait
+byte string becomes the same `data:` URL the SD-JWT VC `picture` claim uses.
+If a wallet returns both an mdoc and an SD-JWT VC and they disagree on an
+attribute, the presentation is rejected with `InvalidWalletResponse` rather
+than silently preferring one.
+
 ## Failure behavior
 
 Verifier and presentation failures extend `EudiWalletException`. Invalid
@@ -135,7 +159,8 @@ constructor or method arguments throw `InvalidArgumentException`. Important
 package exceptions include:
 
 - `UnknownClaim`, `InvalidConfiguration`
-- `VerifierUnavailable`, `VerifierRejected`
+- `VerifierUnavailable`, `VerifierRejected` (HTTP status in `status()`, up to
+  2 KiB of the verifier body in `responseBody` for operator logs only)
 - `PresentationPending`, `PresentationExpired`, `PresentationFailed`
 - `InvalidWalletResponse`
 

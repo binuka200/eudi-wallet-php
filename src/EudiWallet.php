@@ -45,7 +45,7 @@ final class EudiWallet
     {
         $options ??= new RequestOptions();
         $nonce = self::randomNonce();
-        $query = $this->queryBuilder->build($claims, $options->purpose, $options->format);
+        $query = $this->queryBuilder->build($claims, $options->format);
         $started = $this->verifier->start($query, new StartOptions(
             nonce: $nonce,
             purpose: $options->purpose,
@@ -92,6 +92,10 @@ final class EudiWallet
         return $identity;
     }
 
+    /**
+     * Returns null while the wallet has not submitted yet. Any exception is terminal
+     * for this session: expired locally, unknown to the verifier, failed, or malformed.
+     */
     public function poll(WalletSession $session, ?string $responseCode = null): ?VerifiedIdentity
     {
         if ($session->isExpired($this->sessionLifetimeSeconds)) {

@@ -110,12 +110,35 @@ final class PidAttributeMap
     {
         $normalized = [];
         foreach (self::MDOC_NAMES as $claim => $name) {
-            if (array_key_exists($name, $attributes)) {
-                $normalized[$claim] = $attributes[$name];
+            if (!array_key_exists($name, $attributes)) {
+                continue;
             }
+            $value = $attributes[$name];
+            if ($claim === Claim::PORTRAIT && is_string($value)) {
+                $value = self::portraitDataUrl($value);
+            }
+            $normalized[$claim] = $value;
         }
 
         return $normalized;
+    }
+
+    /**
+     * mdoc carries the portrait as raw image bytes while SD-JWT VC carries a
+     * data URL. Both formats are exposed in the SD-JWT VC shape.
+     */
+    private static function portraitDataUrl(string $bytes): string
+    {
+        if (str_starts_with($bytes, 'data:')) {
+            return $bytes;
+        }
+        $mime = match (true) {
+            str_starts_with($bytes, "\xFF\xD8\xFF") => 'image/jpeg',
+            str_starts_with($bytes, "\x00\x00\x00\x0CjP  \r\n\x87\n") => 'image/jp2',
+            default => 'application/octet-stream',
+        };
+
+        return 'data:'.$mime.';base64,'.base64_encode($bytes);
     }
 
     /**

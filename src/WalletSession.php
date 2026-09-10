@@ -6,6 +6,13 @@ namespace EudiWallet;
 
 final class WalletSession
 {
+    /**
+     * Nonce forwarded to the verifier at start. The verifier binds the wallet
+     * response to it; this package does not compare it again after start, so
+     * keep it server-side purely as part of the opaque session state.
+     */
+    public readonly string $nonce;
+
     /** @var non-empty-list<string> */
     public readonly array $claims;
 
@@ -14,7 +21,7 @@ final class WalletSession
      */
     public function __construct(
         public readonly string $transactionId,
-        public readonly string $nonce,
+        string $nonce,
         array $claims,
         public readonly string $purpose,
         public readonly int $createdAt,
@@ -42,6 +49,7 @@ final class WalletSession
         if ($createdAt < 1) {
             throw new \InvalidArgumentException('Wallet session creation time is invalid.');
         }
+        $this->nonce = $nonce;
         $this->claims = $claims;
     }
 

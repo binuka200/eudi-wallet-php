@@ -44,7 +44,10 @@ final class CborDecoder
         $additional = $initial & 0x1f;
 
         if ($additional === 31) {
-            throw new \UnexpectedValueException('Indefinite-length CBOR is not supported.');
+            throw new \UnexpectedValueException('Indefinite-length CBOR is not supported; ISO/IEC 18013-5 requires definite-length encoding.');
+        }
+        if ($major === 7 && $additional === 27) {
+            return $this->float64();
         }
         $argument = $this->argument($additional);
 
@@ -157,6 +160,16 @@ final class CborDecoder
     private function float32(int $bits): float
     {
         $decoded = unpack('Gvalue', pack('N', $bits));
+        if ($decoded === false || !isset($decoded['value']) || !is_float($decoded['value'])) {
+            throw new \UnexpectedValueException('Unable to decode CBOR float.');
+        }
+
+        return $decoded['value'];
+    }
+
+    private function float64(): float
+    {
+        $decoded = unpack('Evalue', $this->read(8));
         if ($decoded === false || !isset($decoded['value']) || !is_float($decoded['value'])) {
             throw new \UnexpectedValueException('Unable to decode CBOR float.');
         }

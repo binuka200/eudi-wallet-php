@@ -38,7 +38,7 @@ final class PidClaimValidator
             Claim::RESIDENT_COUNTRY, Claim::ISSUING_COUNTRY => self::isCountryCode($value),
             Claim::EMAIL => self::isText($value) && filter_var($value, FILTER_VALIDATE_EMAIL) !== false,
             Claim::MOBILE_PHONE_NUMBER => self::isText($value) && preg_match('/^\+[0-9]+$/D', $value) === 1,
-            Claim::PORTRAIT => is_string($value),
+            Claim::PORTRAIT => self::isBase64DataUrl($value),
             default => Claim::isKnown($claim) && self::isText($value),
         };
     }
@@ -46,6 +46,12 @@ final class PidClaimValidator
     private static function isText(mixed $value): bool
     {
         return is_string($value) && $value !== '' && preg_match('//u', $value) === 1;
+    }
+
+    private static function isBase64DataUrl(mixed $value): bool
+    {
+        return is_string($value)
+            && preg_match('#^data:[a-z0-9.+/-]+(?:;[a-z0-9.+-]+=[a-z0-9.+-]+)*;base64,[A-Za-z0-9+/]+={0,2}$#Di', $value) === 1;
     }
 
     private static function isCountryCode(mixed $value): bool

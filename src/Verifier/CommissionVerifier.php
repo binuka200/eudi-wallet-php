@@ -22,12 +22,22 @@ use EudiWallet\Exception\VerifierUnavailable;
  */
 final class CommissionVerifier implements Verifier
 {
+    private const RESERVED_HEADERS = ['accept', 'content-type', 'content-length', 'host'];
+
     private readonly string $baseUrl;
 
+    /** @var array<string, string> */
+    private readonly array $headers;
+
+    /**
+     * @param array<string, string> $headers Sent with every verifier request, for example an
+     *                                       Authorization header when the verifier API is protected.
+     */
     public function __construct(
         private readonly Transport $transport,
         string $baseUrl,
         private readonly bool $allowInsecureHttp = false,
+        array $headers = [],
     ) {
         $baseUrl = rtrim($baseUrl, '/');
         if ($baseUrl === '') {
@@ -48,6 +58,19 @@ final class CommissionVerifier implements Verifier
             throw new InvalidConfiguration('Verifier URL must contain a host and no credentials, query, or fragment.');
         }
         $this->baseUrl = $baseUrl;
+
+        foreach ($headers as $name => $value) {
+            if (preg_match('/^[!#$%&\'*+.^_`|~0-9A-Za-z-]+$/D', $name) !== 1) {
+                throw new InvalidConfiguration('Verifier header names must be valid HTTP tokens.');
+            }
+            if (in_array(strtolower($name), self::RESERVED_HEADERS, true)) {
+                throw new InvalidConfiguration('Verifier header '.$name.' is managed by the client and cannot be overridden.');
+            }
+            if (preg_match('/[\x00-\x08\x0a-\x1f\x7f]/', $value) === 1) {
+                throw new InvalidConfiguration('Verifier header values must not contain control characters.');
+            }
+        }
+        $this->headers = $headers;
     }
 
     public function start(array $dcqlQuery, StartOptions $options): StartedPresentation
@@ -83,7 +106,7 @@ final class CommissionVerifier implements Verifier
         ], $body);
 
         if ($response->status < 200 || $response->status >= 300) {
-            throw new VerifierRejected('Verifier rejected the presentation request.', $response->status);
+            throw new VerifierRejected('Verifier rejected the presentation request.', $response->status, $response->body);
         }
 
         $data = $this->decode($response->body);
@@ -119,6 +142,14 @@ final class CommissionVerifier implements Verifier
         }
     }
 
+    /**
+     * Reads the wallet response.
+     *
+     * The Commission verifier answers 404 only for an unknown transaction and
+     * 400 (empty body) both while the wallet has not submitted yet and when a
+     * supplied response_code does not match. Without a response code a 400 is
+     * therefore reported as pending; with one it is a terminal rejection.
+     */
     public function fetch(string $transactionId, ?string $responseCode = null): WalletResponse
     {
         if ($transactionId === '') {
@@ -131,10 +162,16 @@ final class CommissionVerifier implements Verifier
 
         $response = $this->call('GET', $url, ['Accept' => 'application/json']);
         if ($response->status === 404) {
-            return WalletResponse::pending();
+            throw new VerifierRejected('Verifier does not know the presentation transaction.', 404, $response->body);
+        }
+        if ($response->status === 400) {
+            if ($responseCode === null || $responseCode === '') {
+                return WalletResponse::pending();
+            }
+            throw new VerifierRejected('Verifier refused the response code, or the wallet has not submitted yet.', 400, $response->body);
         }
         if ($response->status < 200 || $response->status >= 300) {
-            throw new VerifierRejected('Verifier refused to return the wallet response.', $response->status);
+            throw new VerifierRejected('Verifier refused to return the wallet response.', $response->status, $response->body);
         }
 
         return WalletResponse::fromVerifierPayload($this->decode($response->body));
@@ -146,7 +183,7 @@ final class CommissionVerifier implements Verifier
     private function call(string $method, string $url, array $headers, ?string $body = null): HttpResponse
     {
         try {
-            return $this->transport->send($method, $url, $headers, $body);
+            return $this->transport->send($method, $url, array_merge($this->headers, $headers), $body);
         } catch (VerifierUnavailable $exception) {
             throw $exception;
         } catch (\Throwable $exception) {

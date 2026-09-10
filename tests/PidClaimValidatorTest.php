@@ -19,7 +19,7 @@ final class PidClaimValidatorTest extends TestCase
             Claim::BIRTH_DATE => '1980-05-23',
             Claim::BIRTH_PLACE => ['country' => 'FR', 'locality' => 'Paris'],
             Claim::NATIONALITY => ['FR', 'QU'],
-            Claim::PORTRAIT => '',
+            Claim::PORTRAIT => 'data:image/jpeg;base64,/9j/4AAQSkZJRg==',
             Claim::RESIDENT_ADDRESS => '1 Rue de Rivoli, Paris',
             Claim::RESIDENT_COUNTRY => 'FR',
             Claim::RESIDENT_STATE => 'Île-de-France',
@@ -44,6 +44,18 @@ final class PidClaimValidatorTest extends TestCase
         ]);
 
         $this->addToAssertionCount(1);
+    }
+
+    public function testRejectsPortraitThatIsNotABase64DataUrl(): void
+    {
+        foreach (['', "\xFF\xD8\xFF", 'data:image/jpeg;base64,', 'https://example.test/me.jpg'] as $portrait) {
+            try {
+                PidClaimValidator::validate([Claim::PORTRAIT => $portrait]);
+                $this->fail('Portrait should have been rejected.');
+            } catch (InvalidWalletResponse $exception) {
+                $this->assertStringContainsString('portrait', $exception->getMessage());
+            }
+        }
     }
 
     public function testRejectsMalformedStructuredAndContactValues(): void
