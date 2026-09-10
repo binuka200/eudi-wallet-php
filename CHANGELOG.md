@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+Nothing has been tagged yet. Everything below ships in the first release.
+
+### Foundation
+
+- Framework-neutral PHP façade for requesting and reading EUDI Wallet PID
+  attributes through a remote OpenID4VP verifier.
+- Commission verifier client for `POST/GET /ui/presentations`.
+- In-process fake verifier for tests and local application development.
+- PID DCQL builder for mdoc and SD-JWT VC, plus best-effort claim normalisation.
+- Docker Compose example pinning the Commission verifier development image.
+- PHPStan level 8, lint, and PHP 8.1–8.5 CI.
+
+### Since the foundation commit
+
 - Add `tools/live-check.php` (`composer live-check`) and a CI job that runs
   it against the pinned Commission verifier image.
 - Add contributor tooling: isolated php-cs-fixer toolchain (`composer cs`),
@@ -26,8 +40,8 @@
 - Report malformed mdoc presentations as `InvalidWalletResponse` with the
   decode reason instead of an empty claim set.
 - Decode CBOR 64-bit floats.
-- **Breaking:** `PidQueryBuilder::build()` no longer takes the unused purpose
-  argument; the signature is `build(array $claims, string $format = 'both')`.
+- `PidQueryBuilder::build()` takes `(array $claims, string $format = 'both')`;
+  the unused purpose argument was removed before any release.
 - Align PID attributes with PID Rulebook 1.7, including distinct mdoc and
   SD-JWT VC claim paths and removal of obsolete age-over PID attributes.
 - Decode structured SD-JWT disclosures and compact mdoc issuer-signed items.
@@ -43,13 +57,3 @@
 - Validate normalized PID value types before returning a verified identity.
 - Fix the local Compose syntax and pin the current verifier endpoint v0.11.0
   image.
-
-## 0.1.0 - 2026-09-09
-
-- Framework-neutral PHP façade for requesting and reading EUDI Wallet PID
-  attributes through a remote OpenID4VP verifier.
-- Commission verifier client for `POST/GET /ui/presentations`.
-- In-process fake verifier for tests and local application development.
-- PID DCQL builder for mdoc and SD-JWT VC, plus best-effort claim normalisation.
-- Docker Compose example pinning the Commission verifier development image.
-- PHPStan level 8, lint, and PHP 8.1–8.5 CI.
