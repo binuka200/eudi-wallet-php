@@ -25,6 +25,16 @@ Verified against the pinned `v0.11.0` source (`GetWalletResponse.kt`,
 The verifier cannot distinguish "pending" from "wrong response code" on the
 wire, so same-device callbacks that arrive before submission fail closed.
 
+### Registration certificate
+
+Since `v0.11.0` every `POST /ui/presentations/v2` must carry exactly one of
+`intended_use_id` (a use configured on the verifier through
+`VERIFIER_INTENDEDUSES_<n>_*`) or `registration_certificate` (a JWS compact
+relying-party registration certificate). `CommissionVerifier` accepts a
+default for either and `RequestOptions` can override it per request. The
+verifier answers `400 {"error":"MissingRegistrationCertificate"}` otherwise;
+that code is included in the `VerifierRejected` message.
+
 ### Authorization
 
 The Commission project states that the relying-party API must be authorized

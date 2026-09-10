@@ -30,15 +30,29 @@ final class CommissionVerifier implements Verifier
     private readonly array $headers;
 
     /**
-     * @param array<string, string> $headers Sent with every verifier request, for example an
-     *                                       Authorization header when the verifier API is protected.
+     * @param array<string, string> $headers            Sent with every verifier request, for example an
+     *                                                  Authorization header when the verifier API is protected.
+     * @param string|null           $intendedUseId      Default configured intended use. Verifier v0.11.0 requires
+     *                                                  either this or a registration certificate on every start.
+     * @param string|null           $registrationCertificate Default relying-party registration certificate (JWS compact).
      */
     public function __construct(
         private readonly Transport $transport,
         string $baseUrl,
         private readonly bool $allowInsecureHttp = false,
         array $headers = [],
+        private readonly ?string $intendedUseId = null,
+        private readonly ?string $registrationCertificate = null,
     ) {
+        if ($this->intendedUseId !== null && $this->registrationCertificate !== null) {
+            throw new InvalidConfiguration('intendedUseId and registrationCertificate are mutually exclusive.');
+        }
+        if ($this->intendedUseId !== null && trim($this->intendedUseId) === '') {
+            throw new InvalidConfiguration('intendedUseId cannot be empty.');
+        }
+        if ($this->registrationCertificate !== null && trim($this->registrationCertificate) === '') {
+            throw new InvalidConfiguration('registrationCertificate cannot be empty.');
+        }
         $baseUrl = rtrim($baseUrl, '/');
         if ($baseUrl === '') {
             throw new InvalidConfiguration('Verifier base URL cannot be empty.');
@@ -93,9 +107,12 @@ final class CommissionVerifier implements Verifier
         }
         if ($options->intendedUseId !== null) {
             $payload['intended_use_id'] = $options->intendedUseId;
-        }
-        if ($options->registrationCertificate !== null) {
+        } elseif ($options->registrationCertificate !== null) {
             $payload['registration_certificate'] = $options->registrationCertificate;
+        } elseif ($this->intendedUseId !== null) {
+            $payload['intended_use_id'] = $this->intendedUseId;
+        } elseif ($this->registrationCertificate !== null) {
+            $payload['registration_certificate'] = $this->registrationCertificate;
         }
         $payload['authorization_request_scheme'] = $options->authorizationRequestScheme;
 
@@ -106,7 +123,12 @@ final class CommissionVerifier implements Verifier
         ], $body);
 
         if ($response->status < 200 || $response->status >= 300) {
-            throw new VerifierRejected('Verifier rejected the presentation request.', $response->status, $response->body);
+            $code = self::errorCode($response->body);
+            throw new VerifierRejected(
+                'Verifier rejected the presentation request'.($code === null ? '.' : ': '.$code),
+                $response->status,
+                $response->body,
+            );
         }
 
         $data = $this->decode($response->body);
@@ -189,6 +211,24 @@ final class CommissionVerifier implements Verifier
         } catch (\Throwable $exception) {
             throw new VerifierUnavailable('Verifier transport failed.', 0, $exception);
         }
+    }
+
+    /**
+     * The Commission verifier answers validation failures with {"error": "<Code>"}.
+     * Only a short identifier-like token is surfaced so the message stays safe to log.
+     */
+    private static function errorCode(string $body): ?string
+    {
+        if ($body === '' || strlen($body) > 4096) {
+            return null;
+        }
+        $data = json_decode($body, true);
+        $error = is_array($data) ? ($data['error'] ?? null) : null;
+        if (!is_string($error) || preg_match('/^[A-Za-z0-9._-]{1,120}$/D', $error) !== 1) {
+            return null;
+        }
+
+        return $error;
     }
 
     /** @return array<string, mixed> */

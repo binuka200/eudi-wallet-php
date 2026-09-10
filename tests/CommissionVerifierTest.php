@@ -93,6 +93,66 @@ final class CommissionVerifierTest extends TestCase
         }
     }
 
+    public function testStartRejectionSurfacesTheVerifierErrorCode(): void
+    {
+        $transport = new RecordingTransport();
+        $transport->enqueue(new HttpResponse(400, '{"error":"MissingRegistrationCertificate"}'));
+        $verifier = new CommissionVerifier($transport, 'https://verifier.example');
+
+        try {
+            $verifier->start(['credentials' => []], $this->options());
+            $this->fail('Expected rejection.');
+        } catch (VerifierRejected $exception) {
+            $this->assertSame('Verifier rejected the presentation request: MissingRegistrationCertificate', $exception->getMessage());
+        }
+    }
+
+    public function testStartRejectionIgnoresUnsafeErrorCodes(): void
+    {
+        $transport = new RecordingTransport();
+        $transport->enqueue(new HttpResponse(400, '{"error":"<script>alert(1)</script>"}'));
+        $verifier = new CommissionVerifier($transport, 'https://verifier.example');
+
+        try {
+            $verifier->start(['credentials' => []], $this->options());
+            $this->fail('Expected rejection.');
+        } catch (VerifierRejected $exception) {
+            $this->assertSame('Verifier rejected the presentation request.', $exception->getMessage());
+        }
+    }
+
+    public function testDefaultIntendedUseIsSentWhenTheRequestHasNone(): void
+    {
+        $transport = new RecordingTransport();
+        $transport->enqueue($this->startResponse());
+        $verifier = new CommissionVerifier($transport, 'https://verifier.example', intendedUseId: '1');
+
+        $verifier->start(['credentials' => []], $this->options());
+        $body = json_decode((string) $transport->sent[0]['body'], true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertSame('1', $body['intended_use_id']);
+        $this->assertArrayNotHasKey('registration_certificate', $body);
+    }
+
+    public function testRequestLevelRegistrationCertificateOverridesTheDefaultIntendedUse(): void
+    {
+        $transport = new RecordingTransport();
+        $transport->enqueue($this->startResponse());
+        $verifier = new CommissionVerifier($transport, 'https://verifier.example', intendedUseId: '1');
+
+        $verifier->start(['credentials' => []], $this->options(registrationCertificate: 'h.p.s'));
+        $body = json_decode((string) $transport->sent[0]['body'], true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertSame('h.p.s', $body['registration_certificate']);
+        $this->assertArrayNotHasKey('intended_use_id', $body);
+    }
+
+    public function testDefaultIntendedUseAndCertificateAreExclusive(): void
+    {
+        $this->expectException(InvalidConfiguration::class);
+        new CommissionVerifier(new RecordingTransport(), 'https://verifier.example', intendedUseId: '1', registrationCertificate: 'h.p.s');
+    }
+
     public function testConfiguredHeadersAreSentWithEveryRequest(): void
     {
         $transport = new RecordingTransport();
@@ -221,7 +281,18 @@ final class CommissionVerifierTest extends TestCase
         $verifier->fetch('tx');
     }
 
-    private function options(string $jarMode = 'by_reference'): StartOptions
+    private function startResponse(): HttpResponse
+    {
+        return new HttpResponse(200, json_encode([
+            'transaction_id' => 'tx-1',
+            'client_id' => 'x509_san_dns:localhost',
+            'request_uri' => 'https://verifier.test/wallet/request.jwt/abc',
+            'request_uri_method' => 'post',
+            'authorization_request_uri' => 'openid4vp://?client_id=x&request_uri=y',
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    private function options(string $jarMode = 'by_reference', ?string $registrationCertificate = null): StartOptions
     {
         return new StartOptions(
             nonce: 'nonce-value-that-is-long-enough-32',
@@ -234,7 +305,7 @@ final class CommissionVerifierTest extends TestCase
             redirectUriTemplate: 'https://app.example/callback?response_code={RESPONSE_CODE}',
             issuerChain: null,
             intendedUseId: null,
-            registrationCertificate: null,
+            registrationCertificate: $registrationCertificate,
         );
     }
 }

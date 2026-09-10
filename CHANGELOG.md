@@ -7,6 +7,11 @@
   `v0.11.0` behaviour. Previously every cross-device poll threw until the
   wallet submitted.
 - Add a `headers` option to `CommissionVerifier` for protected verifier APIs.
+- Add default `intendedUseId` / `registrationCertificate` options to
+  `CommissionVerifier`; verifier `v0.11.0` refuses to start without one, so
+  the documented flow could not start a transaction against the pinned image.
+- Include the verifier's short error code (for example
+  `MissingRegistrationCertificate`) in the `VerifierRejected` message on start.
 - `VerifierRejected` now exposes `status()` and a truncated `responseBody`.
 - Expose the mdoc portrait as the same `data:` URL shape as SD-JWT VC, and
   require a base64 data URL when validating the portrait.

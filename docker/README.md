@@ -21,7 +21,14 @@ $verifier = new CommissionVerifier(
     $transport,
     'http://127.0.0.1:8080',
     allowInsecureHttp: true, // local Docker only
+    intendedUseId: '1',      // the intended use the dev image ships with
 );
 ```
+
+`GET /ui/intended-uses` lists the intended uses the running verifier knows.
+The dev image's client id is the pre-registered value `Verifier`, so the
+`haip` profile is refused with `HaipNotSupported.ClientIdPrefixX509HashMustBeUsed`
+until the verifier is configured with an x509 client id; use the default
+`openid4vp` profile locally.
 
 Pin upgrades by changing the image tag. Do not run `:latest` in production.

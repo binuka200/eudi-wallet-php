@@ -72,9 +72,16 @@ use EudiWallet\Verifier\CommissionVerifier;
 use EudiWallet\Verifier\Psr18Transport;
 
 $transport = new Psr18Transport($psr18Client, $requestFactory, $streamFactory);
-$verifier = new CommissionVerifier($transport, $_ENV['VERIFIER_URL']);
+$verifier = new CommissionVerifier($transport, $_ENV['VERIFIER_URL'], intendedUseId: $_ENV['VERIFIER_INTENDED_USE']);
 $wallet = new EudiWallet($verifier);
 ```
+
+Verifier `v0.11.0` refuses to start a transaction unless it carries either a
+configured `intended_use_id` or a relying-party `registration_certificate`.
+Set one as the default on `CommissionVerifier`, or per request through
+`RequestOptions`; a per-request value wins. The Docker image below ships one
+intended use with id `1`. Without either, the start fails with
+`VerifierRejected: ... MissingRegistrationCertificate`.
 
 `VERIFIER_URL` must be HTTPS unless you pass `allowInsecureHttp: true` for local
 Docker. When the verifier API is protected, pass the credential as a header
