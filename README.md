@@ -1,5 +1,9 @@
 # EUDI Wallet for PHP
 
+[![CI](https://github.com/binuka200/eudi-wallet-php/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/binuka200/eudi-wallet-php/actions/workflows/ci.yml)
+[![PHP 8.1+](https://img.shields.io/badge/php-8.1%2B-777bb4)](composer.json)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 A framework-neutral PHP façade for accepting EU Digital Identity Wallets.
 
 It does **not** implement OpenID4VP, SD-JWT verification, or mdoc/COSE. Those
