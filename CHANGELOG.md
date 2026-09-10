@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-Nothing has been tagged yet. Everything below ships in the first release.
+## 0.2.0 - 2026-09-10
+
+First tagged release. `0.1.0` was never tagged or published.
 
 ### Foundation
 
@@ -15,6 +17,9 @@ Nothing has been tagged yet. Everything below ships in the first release.
 - PHPStan level 8, lint, and PHP 8.1–8.5 CI.
 
 ### Since the foundation commit
+
+Verified live against the pinned Commission verifier `v0.11.0` image; that
+check now runs in CI on every push.
 
 - Add `tools/live-check.php` (`composer live-check`) and a CI job that runs
   it against the pinned Commission verifier image.
