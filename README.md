@@ -1,6 +1,8 @@
 # EUDI Wallet for PHP
 
 [![CI](https://github.com/binuka200/eudi-wallet-php/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/binuka200/eudi-wallet-php/actions/workflows/ci.yml)
+[![Latest version](https://img.shields.io/packagist/v/binuka200/eudi-wallet)](https://packagist.org/packages/binuka200/eudi-wallet)
+[![Downloads](https://img.shields.io/packagist/dt/binuka200/eudi-wallet)](https://packagist.org/packages/binuka200/eudi-wallet/stats)
 [![PHP 8.1+](https://img.shields.io/badge/php-8.1%2B-777bb4)](composer.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -54,8 +56,13 @@ installations. Those apps need a stable client, not a second cryptography stack.
 ## Install
 
 ```bash
-composer require binuka200/eudi-wallet
+composer require binuka200/eudi-wallet:^0.2
 ```
+
+Published on [Packagist](https://packagist.org/packages/binuka200/eudi-wallet).
+The package is pre-1.0, so pin a minor version; the public API may change
+between minor releases until 1.0. Each change is listed in
+[CHANGELOG.md](CHANGELOG.md).
 
 Bring a PSR-18 HTTP client and PSR-17 factories when talking to a real verifier.
 `FakeVerifier` needs no HTTP client.
