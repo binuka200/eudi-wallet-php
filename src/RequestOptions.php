@@ -25,7 +25,6 @@ final class RequestOptions
         public readonly ?string $issuerChain = null,
         public readonly ?string $intendedUseId = null,
         public readonly ?string $registrationCertificate = null,
-        public readonly ?string $nonce = null,
     ) {
         if (trim($this->purpose) === '') {
             throw new \InvalidArgumentException('Presentation purpose cannot be empty.');
@@ -39,8 +38,8 @@ final class RequestOptions
         if (!in_array($this->jarMode, ['by_reference', 'by_value'], true)) {
             throw new \InvalidArgumentException('jar_mode must be by_reference or by_value.');
         }
-        if (!in_array($this->requestUriMethod, ['get', 'post', 'post_get'], true)) {
-            throw new \InvalidArgumentException('request_uri_method must be get, post, or post_get.');
+        if (!in_array($this->requestUriMethod, ['get', 'post'], true)) {
+            throw new \InvalidArgumentException('request_uri_method must be get or post.');
         }
         if (!in_array($this->responseMode, ['direct_post', 'direct_post.jwt'], true)) {
             throw new \InvalidArgumentException('response_mode must be direct_post or direct_post.jwt.');
@@ -59,9 +58,6 @@ final class RequestOptions
             if (!in_array($scheme, ['http', 'https'], true) || !is_string($host) || $host === '' || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment'])) {
                 throw new \InvalidArgumentException('Redirect URI template must be an absolute HTTP(S) URL.');
             }
-        }
-        if ($this->nonce !== null && strlen($this->nonce) < 32) {
-            throw new \InvalidArgumentException('Nonce must contain at least 32 characters.');
         }
         if ($this->intendedUseId !== null && $this->registrationCertificate !== null) {
             throw new \InvalidArgumentException('intended_use_id and registration_certificate are mutually exclusive.');

@@ -32,7 +32,7 @@ final class PidQueryBuilderTest extends TestCase
             [[PidQueryBuilder::MDOC_ID], [PidQueryBuilder::SD_JWT_ID]],
             $query['credential_sets'][0]['options'],
         );
-        $this->assertSame('Identity check', $query['credential_sets'][0]['purpose']);
+        $this->assertArrayNotHasKey('purpose', $query['credential_sets'][0]);
     }
 
     public function testCanRequestMdocOnly(): void

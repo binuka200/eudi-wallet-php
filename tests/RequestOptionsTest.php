@@ -9,10 +9,10 @@ use PHPUnit\Framework\TestCase;
 
 final class RequestOptionsTest extends TestCase
 {
-    public function testRejectsShortNonce(): void
+    public function testRejectsNonStandardRequestUriMethod(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        new RequestOptions(nonce: 'short');
+        new RequestOptions(requestUriMethod: 'post_get');
     }
 
     public function testIntendedUseAndCertificateAreExclusive(): void
@@ -35,7 +35,7 @@ final class RequestOptionsTest extends TestCase
 
     public function testAcceptsCurrentRequestUriMethods(): void
     {
-        foreach (['get', 'post', 'post_get'] as $method) {
+        foreach (['get', 'post'] as $method) {
             $this->assertSame($method, (new RequestOptions(requestUriMethod: $method))->requestUriMethod);
         }
     }

@@ -22,8 +22,8 @@ final class WalletSession
         if (trim($transactionId) === '') {
             throw new \InvalidArgumentException('Wallet session is missing a transaction id.');
         }
-        if (strlen($nonce) < 32) {
-            throw new \InvalidArgumentException('Wallet session nonce must contain at least 32 characters.');
+        if (strlen($nonce) < 32 || preg_match('/^[A-Za-z0-9._~-]+$/D', $nonce) !== 1) {
+            throw new \InvalidArgumentException('Wallet session nonce must contain at least 32 URL-safe ASCII characters.');
         }
         if ($claims === [] || !array_is_list($claims)) {
             throw new \InvalidArgumentException('Wallet session must contain a non-empty claim list.');

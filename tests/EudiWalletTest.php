@@ -78,6 +78,18 @@ final class EudiWalletTest extends TestCase
         $this->assertSame([Claim::BIRTH_DATE], $restored->claims);
     }
 
+    public function testCreatesFreshUrlSafeNonceForEveryRequest(): void
+    {
+        $wallet = new EudiWallet(new FakeVerifier());
+
+        $first = $wallet->request([Claim::FAMILY_NAME])->session->nonce;
+        $second = $wallet->request([Claim::FAMILY_NAME])->session->nonce;
+
+        $this->assertMatchesRegularExpression('/^[A-Za-z0-9._~-]{32,}$/D', $first);
+        $this->assertMatchesRegularExpression('/^[A-Za-z0-9._~-]{32,}$/D', $second);
+        $this->assertNotSame($first, $second);
+    }
+
     public function testRejectsAResponseMissingARequestedClaim(): void
     {
         $verifier = new FakeVerifier();
@@ -86,6 +98,34 @@ final class EudiWalletTest extends TestCase
         $verifier->complete($challenge->transactionId(), [Claim::FAMILY_NAME => 'Dupont']);
 
         $this->expectException(\EudiWallet\Exception\InvalidWalletResponse::class);
+        $wallet->verify($challenge->session);
+    }
+
+    public function testRejectsNullRequestedClaim(): void
+    {
+        $verifier = new FakeVerifier();
+        $wallet = new EudiWallet($verifier);
+        $challenge = $wallet->request([Claim::FAMILY_NAME]);
+        $verifier->complete($challenge->transactionId(), [Claim::FAMILY_NAME => null]);
+
+        $this->expectException(\EudiWallet\Exception\InvalidWalletResponse::class);
+        $this->expectExceptionMessage('family_name');
+        $wallet->verify($challenge->session);
+    }
+
+    public function testRejectsMalformedTypedClaims(): void
+    {
+        $verifier = new FakeVerifier();
+        $wallet = new EudiWallet($verifier);
+        $challenge = $wallet->request([Claim::BIRTH_DATE, Claim::NATIONALITY, Claim::SEX]);
+        $verifier->complete($challenge->transactionId(), [
+            Claim::BIRTH_DATE => '2000-02-31',
+            Claim::NATIONALITY => ['France'],
+            Claim::SEX => 8,
+        ]);
+
+        $this->expectException(\EudiWallet\Exception\InvalidWalletResponse::class);
+        $this->expectExceptionMessage('birth_date, nationality, sex');
         $wallet->verify($challenge->session);
     }
 

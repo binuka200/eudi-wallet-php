@@ -83,6 +83,12 @@ is a development tool; assess any backend before production use.
 
 Local Compose file: [docker/README.md](docker/README.md).
 
+The challenge uses the complete `authorization_request_uri` returned by version
+2 of the Commission verifier API. The package does not reconstruct or override
+that URI. Presentation nonces are always generated internally from 32
+cryptographically random bytes; they cannot be supplied by browser input or
+application code.
+
 ## Requested claims
 
 `request()` understands the encoding-independent EU PID identifiers in `Claim`.
@@ -102,6 +108,10 @@ helpers when your lawful use case already requires `Claim::BIRTH_DATE`.
 Same-device flows should set `redirectUriTemplate` with `{RESPONSE_CODE}`.
 Cross-device flows omit it and call `poll()` until the wallet submits.
 
+`purpose` is application context, not a DCQL property. Display it to the user
+before redirecting to the Wallet; it is retained in `WalletSession` but is not
+inserted into the standards-facing DCQL query.
+
 ```php
 $identity = $wallet->poll($session);
 if ($identity === null) {
@@ -115,7 +125,8 @@ if ($identity === null) {
 `nationalities()`. Raw `vp_token` data remains available. Compact mdoc/CBOR and
 SD-JWT disclosures are decoded only after the verifier has accepted them;
 signature, holder-binding, validity, revocation, and trust checks remain the
-verifier's responsibility.
+verifier's responsibility. Requested PID values are then checked against the
+Rulebook's format-independent types before a `VerifiedIdentity` is returned.
 
 ## Failure behavior
 

@@ -7,4 +7,3 @@ services:
     environment:
       VERIFIER_PUBLICURL: "${VERIFIER_PUBLICURL:-http://127.0.0.1:8080}"
       VERIFIER_DEFAULTHTTPRESPONSEMODE: "DirectPostJwt"
-```

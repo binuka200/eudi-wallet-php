@@ -57,9 +57,11 @@ final class CommissionVerifier implements Verifier
             'nonce' => $options->nonce,
             'response_mode' => $options->responseMode,
             'jar_mode' => $options->jarMode,
-            'request_uri_method' => $options->requestUriMethod,
             'profile' => $options->profile,
         ];
+        if ($options->jarMode === 'by_reference') {
+            $payload['request_uri_method'] = $options->requestUriMethod;
+        }
         if ($options->redirectUriTemplate !== null) {
             $payload['wallet_response_redirect_uri_template'] = $options->redirectUriTemplate;
         }
@@ -72,12 +74,10 @@ final class CommissionVerifier implements Verifier
         if ($options->registrationCertificate !== null) {
             $payload['registration_certificate'] = $options->registrationCertificate;
         }
-        if ($options->authorizationRequestScheme !== 'openid4vp') {
-            $payload['authorization_request_scheme'] = $options->authorizationRequestScheme;
-        }
+        $payload['authorization_request_scheme'] = $options->authorizationRequestScheme;
 
         $body = json_encode($payload, JSON_THROW_ON_ERROR);
-        $response = $this->call('POST', $this->baseUrl.'/ui/presentations', [
+        $response = $this->call('POST', $this->baseUrl.'/ui/presentations/v2', [
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ], $body);
@@ -91,7 +91,8 @@ final class CommissionVerifier implements Verifier
         $clientId = $data['client_id'] ?? null;
         $requestUri = $data['request_uri'] ?? null;
         $request = $data['request'] ?? null;
-        $requestUriMethod = $data['request_uri_method'] ?? $options->requestUriMethod;
+        $authorizationRequestUri = $data['authorization_request_uri'] ?? null;
+        $requestUriMethod = $data['request_uri_method'] ?? null;
 
         if (!is_string($transactionId) || $transactionId === '') {
             throw new InvalidWalletResponse('Verifier start response is missing transaction_id.');
@@ -99,15 +100,23 @@ final class CommissionVerifier implements Verifier
         if (!is_string($clientId) || $clientId === '') {
             throw new InvalidWalletResponse('Verifier start response is missing client_id.');
         }
+        if (!is_string($authorizationRequestUri) || $authorizationRequestUri === '') {
+            throw new InvalidWalletResponse('Verifier start response is missing authorization_request_uri.');
+        }
 
-        return new StartedPresentation(
-            transactionId: $transactionId,
-            clientId: $clientId,
-            requestUri: is_string($requestUri) && $requestUri !== '' ? $requestUri : null,
-            requestUriMethod: is_string($requestUriMethod) && $requestUriMethod !== '' ? $requestUriMethod : null,
-            request: is_string($request) && $request !== '' ? $request : null,
-            authorizationRequestScheme: $options->authorizationRequestScheme,
-        );
+        try {
+            return new StartedPresentation(
+                transactionId: $transactionId,
+                clientId: $clientId,
+                requestUri: is_string($requestUri) && $requestUri !== '' ? $requestUri : null,
+                requestUriMethod: is_string($requestUriMethod) && $requestUriMethod !== '' ? $requestUriMethod : null,
+                request: is_string($request) && $request !== '' ? $request : null,
+                authorizationRequestScheme: $options->authorizationRequestScheme,
+                authorizationRequestUri: $authorizationRequestUri,
+            );
+        } catch (\InvalidArgumentException $exception) {
+            throw new InvalidWalletResponse('Verifier returned an invalid presentation transaction.', 0, $exception);
+        }
     }
 
     public function fetch(string $transactionId, ?string $responseCode = null): WalletResponse

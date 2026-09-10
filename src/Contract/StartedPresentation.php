@@ -13,6 +13,7 @@ final class StartedPresentation
         public readonly ?string $requestUriMethod,
         public readonly ?string $request,
         public readonly string $authorizationRequestScheme,
+        public readonly ?string $authorizationRequestUri = null,
     ) {
         if (trim($transactionId) === '') {
             throw new \InvalidArgumentException('Verifier did not return a transaction id.');
@@ -20,16 +21,26 @@ final class StartedPresentation
         if (trim($clientId) === '') {
             throw new \InvalidArgumentException('Verifier did not return a client id.');
         }
-        if (($requestUri === null || trim($requestUri) === '') && ($request === null || trim($request) === '')) {
-            throw new \InvalidArgumentException('Verifier did not return a request_uri or request.');
+        if (($requestUri === null || trim($requestUri) === '') && ($request === null || trim($request) === '') && ($authorizationRequestUri === null || trim($authorizationRequestUri) === '')) {
+            throw new \InvalidArgumentException('Verifier did not return an authorization_request_uri, request_uri, or request.');
+        }
+        if ($requestUriMethod !== null && !in_array($requestUriMethod, ['get', 'post'], true)) {
+            throw new \InvalidArgumentException('Verifier returned an invalid request_uri_method.');
         }
         if (preg_match('/^[a-z][a-z0-9+.-]*$/D', $authorizationRequestScheme) !== 1) {
             throw new \InvalidArgumentException('Verifier returned an invalid authorization request scheme.');
+        }
+        if ($authorizationRequestUri !== null && (preg_match('/^[a-z][a-z0-9+.-]*:/', $authorizationRequestUri) !== 1 || preg_match('/[\x00-\x20\x7f]/', $authorizationRequestUri) === 1)) {
+            throw new \InvalidArgumentException('Verifier returned an invalid authorization request URI.');
         }
     }
 
     public function walletUri(): string
     {
+        if ($this->authorizationRequestUri !== null) {
+            return $this->authorizationRequestUri;
+        }
+
         $params = ['client_id' => $this->clientId];
         if ($this->requestUri !== null) {
             $params['request_uri'] = $this->requestUri;

@@ -14,6 +14,7 @@ use EudiWallet\Exception\PresentationFailed;
 use EudiWallet\Exception\PresentationExpired;
 use EudiWallet\Exception\PresentationPending;
 use EudiWallet\Identity\ClaimNormalizer;
+use EudiWallet\Identity\PidClaimValidator;
 
 /**
  * PHP façade over an OpenID4VP verifier. The application owns sessions and users.
@@ -43,7 +44,7 @@ final class EudiWallet
     public function request(array $claims, ?RequestOptions $options = null): PresentationChallenge
     {
         $options ??= new RequestOptions();
-        $nonce = $options->nonce ?? self::randomNonce();
+        $nonce = self::randomNonce();
         $query = $this->queryBuilder->build($claims, $options->purpose, $options->format);
         $started = $this->verifier->start($query, new StartOptions(
             nonce: $nonce,
@@ -120,6 +121,7 @@ final class EudiWallet
             throw new InvalidWalletResponse('Verified presentation is missing requested PID attributes: '.implode(', ', $missing));
         }
         $claims = array_intersect_key($claims, $requested);
+        PidClaimValidator::validate($claims);
         $this->observer->record('presentation.verified', [
             'transaction_present' => true,
             'disclosed_claim_count' => count($claims),

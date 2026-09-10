@@ -2,7 +2,8 @@
 
 This package speaks the Commission verifier's relying-party HTTP API:
 
-- `POST /ui/presentations` — start an OpenID4VP transaction
+- `POST /ui/presentations/v2` — start an OpenID4VP transaction and receive the
+  authoritative `authorization_request_uri`
 - `GET /ui/presentations/{transactionId}` — read the wallet response
 
 Any backend that exposes the same contract can be wrapped with

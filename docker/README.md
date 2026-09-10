@@ -1,6 +1,7 @@
 # Local Commission verifier
 
-The image below is the EU Commission's OpenID4VP verifier endpoint. The
+The Compose file pins the current `v0.11.0` EU Commission OpenID4VP verifier
+endpoint image. The
 Commission describes it as a **development tool**, not a production application.
 Use it to try wallets locally. Production relying parties should point
 `VERIFIER_URL` at a verifier they have independently assessed.

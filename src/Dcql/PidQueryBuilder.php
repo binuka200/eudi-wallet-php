@@ -90,7 +90,6 @@ final class PidQueryBuilder
             'credential_sets' => [
                 [
                     'options' => $options,
-                    'purpose' => $purpose,
                 ],
             ],
         ];

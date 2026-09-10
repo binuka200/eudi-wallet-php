@@ -9,6 +9,14 @@
   malformed verifier start responses, and expired local wallet sessions.
 - Preserve application session state until a verifier response is successfully
   read, allowing recovery from pending or transient failures.
+- Use the Commission verifier v2 initialization API and its authoritative
+  authorization request URI.
+- Generate presentation nonces internally, restrict request URI methods to the
+  OpenID4VP `get` and `post` values, and remove the non-standard DCQL purpose
+  member.
+- Validate normalized PID value types before returning a verified identity.
+- Fix the local Compose syntax and pin the current verifier endpoint v0.11.0
+  image.
 
 ## 0.1.0 - 2026-09-09
 

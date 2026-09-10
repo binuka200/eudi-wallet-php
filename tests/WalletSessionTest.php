@@ -10,6 +10,12 @@ use PHPUnit\Framework\TestCase;
 
 final class WalletSessionTest extends TestCase
 {
+    public function testRejectsNonceOutsideOpenId4VpCharacterSet(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        new WalletSession('tx', str_repeat(' ', 32), [Claim::FAMILY_NAME], 'Test', time());
+    }
+
     public function testRejectsUnsupportedRestoredClaims(): void
     {
         $this->expectException(\InvalidArgumentException::class);
