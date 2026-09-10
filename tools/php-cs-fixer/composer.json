@@ -1,0 +1,10 @@
+{
+    "description": "Isolated code-style tooling. Kept out of the library's own dependency set so the lowest-dependency CI job stays meaningful.",
+    "require": {
+        "php": "^8.1",
+        "friendsofphp/php-cs-fixer": "^3.75"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

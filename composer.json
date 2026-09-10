@@ -4,7 +4,14 @@
     "type": "library",
     "license": "MIT",
     "homepage": "https://github.com/binuka200/eudi-wallet-php",
-    "keywords": ["eudi", "eidas", "openid4vp", "wallet", "pid", "verifiable-credentials"],
+    "keywords": [
+        "eudi",
+        "eidas",
+        "openid4vp",
+        "wallet",
+        "pid",
+        "verifiable-credentials"
+    ],
     "authors": [
         {
             "name": "Binuka Jayaweera",
@@ -41,11 +48,29 @@
         "test": "phpunit",
         "lint": "@php tools/lint.php",
         "analyse": "phpstan analyse --no-progress --memory-limit=512M",
-        "check": ["@lint", "@analyse", "@test"]
+        "cs": "tools/php-cs-fixer/vendor/bin/php-cs-fixer check --diff",
+        "cs:fix": "tools/php-cs-fixer/vendor/bin/php-cs-fixer fix",
+        "cs:install": "@composer install --working-dir=tools/php-cs-fixer --no-interaction",
+        "live-check": "@php tools/live-check.php",
+        "check": [
+            "@lint",
+            "@analyse",
+            "@test"
+        ]
     },
     "config": {
         "sort-packages": true
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "scripts-descriptions": {
+        "test": "Run the PHPUnit suite.",
+        "lint": "Syntax-check every PHP file.",
+        "analyse": "Run PHPStan at level 8.",
+        "cs": "Report code-style violations (run cs:install once first).",
+        "cs:fix": "Fix code-style violations in place.",
+        "cs:install": "Install the isolated php-cs-fixer toolchain.",
+        "live-check": "Exercise the client against a running verifier; see tools/live-check.php.",
+        "check": "lint + analyse + test, what CI runs."
+    }
 }

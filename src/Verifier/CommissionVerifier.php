@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace EudiWallet\Verifier;
 
 use EudiWallet\Contract\HttpResponse;
-use EudiWallet\Contract\StartOptions;
 use EudiWallet\Contract\StartedPresentation;
+use EudiWallet\Contract\StartOptions;
 use EudiWallet\Contract\Transport;
 use EudiWallet\Contract\Verifier;
 use EudiWallet\Contract\WalletResponse;

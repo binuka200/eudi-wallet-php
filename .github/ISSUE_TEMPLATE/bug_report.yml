@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in the package behaves incorrectly.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Replace every attribute value, nonce, transaction id and certificate with placeholders before pasting anything.
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: 0.1.0 or commit hash
+    validations:
+      required: true
+  - type: input
+    id: php
+    attributes:
+      label: PHP version
+      placeholder: 8.3.12
+    validations:
+      required: true
+  - type: input
+    id: verifier
+    attributes:
+      label: Verifier backend and version
+      placeholder: eudi-srv-verifier-endpoint v0.11.0, walt.id x.y, FakeVerifier
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The smallest PHP snippet that shows the problem. Prefer FakeVerifier or RecordingTransport when the bug is not verifier-specific.
+      render: php
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Exception class and message, or the wrong value. Include the HTTP status the verifier returned if known.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I ran `composer check` on the affected commit.
+        - label: I ran `composer live-check` against my verifier (if the bug involves a real verifier).
+        - label: This report contains no real personal data or certificates.
+          required: true

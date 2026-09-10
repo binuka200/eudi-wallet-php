@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add `tools/live-check.php` (`composer live-check`) and a CI job that runs
+  it against the pinned Commission verifier image.
+- Add contributor tooling: isolated php-cs-fixer toolchain (`composer cs`),
+  `.editorconfig`, `.gitattributes` export rules, issue and pull request
+  templates, `CODE_OF_CONDUCT.md`, an expanded `CONTRIBUTING.md`, and
+  `docs/architecture.md`.
 - Fix Commission verifier polling: HTTP 400 without a response code is now
   pending and HTTP 404 is an unknown transaction, matching the pinned
   `v0.11.0` behaviour. Previously every cross-device poll threw until the

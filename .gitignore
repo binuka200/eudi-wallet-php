@@ -5,3 +5,6 @@
 /composer.lock
 .env
 docker/keystore.jks
+/tools/php-cs-fixer/vendor/
+/tools/php-cs-fixer/composer.lock
+/.php-cs-fixer.cache

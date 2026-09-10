@@ -188,12 +188,28 @@ or presentations.
 
 ```bash
 composer install
-composer check
+composer check          # lint + PHPStan level 8 + PHPUnit, what CI runs
 composer audit --locked
 ```
 
-CI covers PHP 8.1 through 8.5, including the lowest supported dependency set.
-The codebase is checked at PHPStan level 8.
+To exercise the client against the real Commission verifier without a wallet:
+
+```bash
+docker compose -f docker/docker-compose.yaml up -d
+composer live-check
+```
+
+CI covers PHP 8.1 through 8.5, the lowest supported dependency set, code
+style, and the live check against the pinned verifier image.
+
+## Contributing
+
+Verifier compatibility reports, PID Rulebook updates, anonymised wire samples
+and additional verifier backends are the most useful contributions. Read
+[CONTRIBUTING.md](CONTRIBUTING.md) for setup and the checks every change must
+pass, and [docs/architecture.md](docs/architecture.md) for the design boundary
+that keeps cryptography out of PHP. This project follows the
+[Contributor Covenant](CODE_OF_CONDUCT.md).
 
 ## License
 

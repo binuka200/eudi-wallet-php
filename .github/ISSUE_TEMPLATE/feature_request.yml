@@ -1,0 +1,32 @@
+name: Feature request
+description: Propose a change to the package.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can an application not do today, or only do awkwardly?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: API sketch if you have one. Remember the package is a façade over a remote verifier; it does not verify credentials in PHP.
+    validations:
+      required: true
+  - type: textarea
+    id: spec
+    attributes:
+      label: Specification or rulebook reference
+      description: Link to the OpenID4VP, HAIP, PID Rulebook or verifier documentation section that motivates this.
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Where should this live?
+      options:
+        - Core package
+        - A separate adapter package (framework-specific)
+        - Documentation or examples
+        - Not sure

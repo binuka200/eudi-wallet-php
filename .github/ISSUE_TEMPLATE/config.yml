@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/binuka200/eudi-wallet-php/security/advisories/new
+    about: Report privately. Never include real presentations, PID attributes or certificates.
+  - name: Commission verifier endpoint
+    url: https://github.com/eu-digital-identity-wallet/eudi-srv-verifier-endpoint/issues
+    about: Problems inside the verifier itself belong upstream.

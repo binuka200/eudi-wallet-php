@@ -1,0 +1,51 @@
+name: Verifier compatibility report
+description: How a verifier (Commission release, walt.id, vendor) differs from what the client assumes.
+labels: [verifier-compatibility]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        These reports are the most useful thing a contributor can send. They keep `docs/verifier.md` true.
+  - type: input
+    id: backend
+    attributes:
+      label: Verifier product and exact version or image tag
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Starting a transaction (POST init)
+        - Reading the wallet response (GET, status codes)
+        - vp_token shape (mdoc / SD-JWT VC layout)
+        - Authorization / headers
+        - Registration certificate / intended use
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What the verifier actually does
+      description: Method, path, request body shape, response status, response body shape. Replace all values with placeholders.
+    validations:
+      required: true
+  - type: textarea
+    id: assumed
+    attributes:
+      label: What the client assumes
+      description: Quote the line in `docs/verifier.md` or the code that disagrees.
+  - type: textarea
+    id: livecheck
+    attributes:
+      label: Output of `composer live-check` against this verifier
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: This report contains no real personal data or certificates.
+          required: true
